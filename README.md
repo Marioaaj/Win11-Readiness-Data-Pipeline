@@ -5,6 +5,7 @@ This project provides an automated reporting layer for large-scale Windows 11 mi
 
 I developed this pipeline to manage a **1,000+ endpoint environment** across 30+ corporate clients, reducing manual reporting overhead by **90%**.
 
+![Architecture Diagram](architecture-diagram.png)
 ## 🛠️ The Pipeline
 The workflow consists of two distinct phases:
 
