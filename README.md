@@ -1,29 +1,71 @@
 # Windows 11 Enterprise Readiness Reporting Pipeline
 
 ## 📊 Project Overview
-This project provides an automated reporting layer for large-scale Windows 11 migrations. It bridges the gap between raw technical audits and executive-level decision-making. 
 
-I developed this pipeline to manage a **1,000+ endpoint environment** across 30+ corporate clients, reducing manual reporting overhead by **90%**.
+Asked to determine which machines across our client base could run Windows 11 —
+with no method defined for how to do it. This is what I built: a two-stage
+pipeline that collects hardware readiness data from every endpoint and turns the
+raw output into reports a client executive can actually act on.
+
+Deployed across a **1,000+ endpoint environment** for 30+ corporate clients,
+cutting manual audit labor by roughly **85%**.
 
 ![Architecture Diagram](architecture-diagram.png)
+
 ## 🛠️ The Pipeline
-The workflow consists of two distinct phases:
 
-### Phase 1: Data Collection (Microsoft Hardware Readiness)
-The pipeline utilizes the official [Microsoft HardwareReadiness.ps1](https://techcommunity.microsoft.com/t/306041) script to perform local hardware validation for TPM 2.0, UEFI, and CPU compatibility. 
+### Phase 1: Data Collection
 
-### Phase 2: Custom ETL & Aggregation (Python)
-I engineered a custom Python-based **ETL (Extract, Transform, Load)** tool (`process_audit_logs.py`) to solve the scalability issue of the Microsoft script. 
-* **Log Parsing:** Utilizes **Regular Expressions (Regex)** to extract nested JSON return codes and status messages from raw `.txt` log exports.
-* **Batch Processing:** Automatically scans directories for multiple client site exports and identifies "Expired" or "In-progress" tasks to pinpoint network/power failures.
-* **Executive Reporting:** Aggregates messy raw data into a localized, C-suite-ready CSV report for regional stakeholders.
+Microsoft's official `HardwareReadiness.ps1` script, pushed to all endpoints via
+N-Central script policy. It validates TPM 2.0, Secure Boot / UEFI, CPU
+compatibility, RAM, and storage — and returns the results as raw text.
 
-## 📈 Business Impact
-* **Scalability:** Transformed a manual one-by-one log check into a batch-processed pipeline capable of auditing 1,000+ nodes in seconds.
-* **Accuracy:** Identified "Unknown" statuses caused by unreachable systems, ensuring zero data gaps during refresh planning.
-* **Strategic Value:** Provided the data used by CEOs to authorize multi-million dollar hardware refresh budgets.
+### Phase 2: Parsing & Aggregation (Python)
+
+The Microsoft script reports on one machine at a time, in a format nobody wants
+to read. `process_audit_logs.py` closes that gap.
+
+* **Log parsing:** Regex extraction of `returnCode` and `returnReason` values
+  from the nested JSON embedded in raw `.txt` exports.
+* **Batch processing:** Scans the working directory for every `.txt` export and
+  processes all client sites in a single run.
+* **Unreachable machine handling:** Detects `Expired` and `In progress` task
+  states and flags those endpoints as unknown rather than failed — a machine
+  that was powered off is a different problem from a machine that can't run
+  Windows 11.
+* **Deduplication:** Tracks machines by name so repeated entries in the export
+  don't produce duplicate rows.
+* **Structured output:** Writes a single CSV with a labeled section per client
+  site, listing each machine, its upgrade status, and the specific reason it
+  can't upgrade.
+
+## 📈 Impact
+
+* **Scale:** Replaced one-by-one log review with batch parsing — audit logs from
+  1,000+ endpoints processed in seconds.
+* **Accuracy:** Separating unreachable machines from genuinely incompatible ones
+  meant no silent gaps in refresh planning.
+* **Decision support:** The reports went to client executives and drove phased
+  hardware refresh approvals.
+
+## ⚙️ Usage
+
+Drop the `.txt` exports in the same directory as the script and run:
+
+```
+python process_audit_logs.py
+```
+
+Output is written to `combined_results.csv` in that directory.
 
 ## 💻 Technical Stack
+
 * **Language:** Python 3.x
-* **Core Modules:** `re` (Regex), `csv`, `os`
-* **Dependency:** Microsoft HardwareReadiness.ps1
+* **Core modules:** `re`, `csv`, `os`
+* **Collection:** Microsoft HardwareReadiness.ps1, deployed via N-Central
+
+## 📝 Notes
+
+Built in a single day alongside normal ticket load, roughly three months into
+the role. The hard part wasn't the parsing — it was recognizing that raw
+per-machine output was useless for the decision that actually needed to be made.
