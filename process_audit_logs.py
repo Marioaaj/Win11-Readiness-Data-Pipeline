@@ -38,7 +38,7 @@ def process_file(file_path):
                         upgrade_status = "Fail"
                         reason = "Parsing error"
                 else:
-                    upgrade_status = "Unknown"  # Changed to "Unknown" per your request
+                    upgrade_status = "Unknown"  # Unreachable machines aren't failures — flag separately
                     reason = "Execution error"
                 results_dict[computer_name] = [upgrade_status, reason]
             i += 1
